@@ -1,0 +1,6 @@
+# Core dependency for the PySpark example
+pyspark>=3.0.0
+
+# Recommended compatibility for local Windows Spark execution
+pandas<3.0.0
+py4j>=0.10.9
