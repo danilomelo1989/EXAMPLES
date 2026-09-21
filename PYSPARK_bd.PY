@@ -1,4 +1,5 @@
 import os
+import sys
 import urllib.request
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DoubleType
@@ -6,11 +7,12 @@ from pyspark.sql.functions import col, sum, desc, round, concat, lit
 
 
 def processar_dados_spark():
-    python_exe = r"C:\Users\danil\AppData\Local\Programs\Python\Python314\python.exe"
+
+    python_exe = sys.executable 
     os.environ["PYSPARK_PYTHON"] = python_exe
     os.environ["PYSPARK_DRIVER_PYTHON"] = python_exe
 
-    # 1. Inicializa a SparkSession
+    # Inicializa a SparkSession
     spark = SparkSession.builder \
         .appName("DataSusPysparkNativo") \
         .config("spark.sql.shuffle.partitions", "5") \
@@ -18,23 +20,23 @@ def processar_dados_spark():
         .config("spark.pyspark.driver.python", python_exe) \
         .getOrCreate()
     
-    print("⚡ SparkSession inicializada !")
+    print("SparkSession inicializada !")
 
-    # 2. Tenta baixar o arquivo CSV público; se falhar, gera um CSV local estável
+    # Tenta baixar o arquivo CSV público; se falhar, gera um CSV local estável
     url_dados = "https://raw.githubusercontent.com/plotly/datasets/master/2014_usa_states.csv"
     arquivo_local = os.path.join(os.getcwd(), "2014_usa_states.csv")
     
     if not os.path.exists(arquivo_local):
-        print("📥 Tentando baixar dados públicos diretamente da URL...")
+        print("Tentando baixar dados públicos diretamente da URL...")
         try:
             urllib.request.urlretrieve(url_dados, arquivo_local)
-            print("✅ Download concluído!")
+            print("Download concluído!")
         except Exception as exc:
-            print(f"⚠️ Não foi possível baixar a URL pública ({exc}).")
+            print(f"Não foi possível baixar a URL pública ({exc}).")
     else:
-        print("🔄 Arquivo local já existente, pulando download.")
+        print("Arquivo local já existente, pulando download.")
 
-    # 3. Define o Schema explicitamente conforme o cabeçalho do CSV
+    # Define o Schema explicitamente conforme o cabeçalho do CSV
     schema_gastos = StructType([
         StructField("Rank", IntegerType(), True),
         StructField("State", StringType(), True),
@@ -42,8 +44,8 @@ def processar_dados_spark():
         StructField("Population", DoubleType(), True)
     ])
 
-    # 4. Leitura do arquivo usando apenas recursos nativos do PySpark
-    print("📖 Carregando o arquivo diretamente no PySpark DataFrame...")
+    # Leitura do arquivo usando apenas recursos nativos do PySpark
+    print("Carregando o arquivo diretamente no PySpark DataFrame...")
     df_spark = spark.read \
         .format("csv") \
         .option("header", "true") \
@@ -51,8 +53,8 @@ def processar_dados_spark():
         .schema(schema_gastos) \
         .load(arquivo_local)
 
-    # 5. Transformação e Agregação de Dados
-    print("📊 Agrupando população pela primeira letra do Estado...")
+    # Transformação e Agregação de Dados
+    print("Agrupando população pela primeira letra do Estado...")
 
     letras = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     df_letras = spark.createDataFrame([(letra,) for letra in letras], ["Primeira_Letra"])
@@ -78,10 +80,10 @@ def processar_dados_spark():
         ) \
         .orderBy("Primeira_Letra")
 
-    # 6. Exibe o resultado na tela (Ação do Spark)
+    # Exibe o resultado na tela (Ação do Spark)
     df_resultado.show(26, truncate=False)
 
-    print(f"\n🌎 População total dos EUA: {total_us:,.2f}")
+    print(f"\nPopulação total dos EUA: {total_us:,.2f}")
 
     # Opcional: Remove o arquivo temporário do disco após a execução
     if os.path.exists(arquivo_local):
